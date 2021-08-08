@@ -1,0 +1,39 @@
+题目一：展示电影ID为2116这部电影各年龄段的平均影评分
+
+SELECT tu.age, AVG(tr.rate)
+FROM t_rating tr
+         LEFT JOIN t_user tu ON tr.userid = tu.userid
+WHERE tr.movieid = 2116
+GROUP BY tu.age
+ORDER BY tu.age;
+
+题目二：找出男性评分最高且评分次数超过50次的10部电影，展示电影名，平均影评分和评分次数
+
+SELECT sex, m.moviename AS name, avgrate, total
+FROM (SELECT 'M' AS sex, movieid, AVG(tr.rate) AS avgrate, COUNT(1) AS total
+      FROM t_rating tr
+                JOIN (SELECT * FROM t_user WHERE sex = 'M') tu ON tr.userid = tu.userid
+      GROUP BY tr.movieid
+      HAVING total > 50) a
+         LEFT JOIN t_movie m ON a.movieid = m.movieid
+ORDER BY avgrate DESC
+LIMIT 10;
+
+题目三：找出影评次数最多的女士所给出最高分的10部电影的平均影评分，展示电影名和平均影评分
+WITH top10_movies AS (
+  SELECT rate, tr.userid, tr.movieid, tr.times
+  FROM t_rating tr
+         JOIN (SELECT tu.userid, COUNT(1) AS cnt
+               FROM t_rating
+                      JOIN (SELECT * FROM t_user WHERE sex = 'F') tu ON t_rating.userid = tu.userid
+               GROUP BY tu.userid
+               ORDER BY cnt DESC
+               LIMIT 1
+  ) a ON tr.userid = a.userid
+  ORDER BY rate DESC, times DESC LIMIT 10)
+SELECT tm.moviename AS moviename, c.avgrate
+FROM (SELECT tr.movieid, AVG(tr.rate) AS avgrate
+      FROM t_rating tr
+             JOIN top10_movies top ON tr.movieid = top.movieid
+      GROUP BY tr.movieid) c
+       LEFT JOIN t_movie tm ON c.movieid = tm.movieid
